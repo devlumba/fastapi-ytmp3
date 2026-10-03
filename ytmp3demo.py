@@ -1,4 +1,3 @@
-import uuid
 import requests
 import os
 import time
@@ -7,13 +6,13 @@ from typing import Annotated
 from fastapi import FastAPI, Request, Form, Query, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 from pytubefix import YouTube
 from pytubefix.cli import on_progress
-from moviepy import AudioFileClip, VideoFileClip
+from moviepy import AudioFileClip
 
-from mutagen.id3 import ID3, APIC, PictureType
-from mutagen.mp3 import MP3
+from mutagen.id3 import ID3, APIC
+from pathvalidate import sanitize_filename
 
 
 app = FastAPI()
@@ -24,7 +23,7 @@ templates = Jinja2Templates(directory="templates")
 
 async def download_thumbnail(image_url, desired_filename):
     img_data = requests.get(image_url).content
-    with open(f"{desired_filename}.png", "wb") as handler:
+    with open("downloads/"+f"{desired_filename}.png", "wb") as handler:
         handler.write(img_data)
     return f"{desired_filename}.png"  # desired_filename == yt_video_filename
 
@@ -33,22 +32,21 @@ async def get_yt_video(url):
     print("GET YT VIDEO INITIATED")
     yt = YouTube(url, client="MWEB", on_progress_callback=on_progress)
     ys = yt.streams.get_highest_resolution()
-    yt_video_name = ys.title
-    yt_filename = str(uuid.uuid4())
+    yt_video_name = sanitize_filename(ys.title)
+
+    yt_filename = yt_video_name
     ys.download(filename=yt_filename+".mp4", output_path="downloads/")
     # print("aight")
-    thumbnail = await download_thumbnail(yt.thumbnail_url, "downloads/"+yt_filename)
-    print(f"Thumbnail URL: {thumbnail}")  # desired_filename == yt_video_filename
-    yt_video_name = yt_video_name.replace("/", "", -1)
-    yt_video_name = yt_video_name.replace("(", "", -1)
-    yt_video_name = yt_video_name.replace(")", "", -1)
-    yt_video_name = yt_video_name.replace("\"", "", -1)
     return [yt_filename, yt_video_name]
 
 
 async def get_yt_video_info(url):
     print("GET YT info INITIATED")
     yt = YouTube(url, client="MWEB", on_progress_callback=on_progress)
+
+    yt_video_name = sanitize_filename(yt.title)
+    thumbnail = await download_thumbnail(yt.thumbnail_url, yt_video_name)
+
     yt_length = yt.length
     yt_length_divided = ""
     if yt_length >= 3600:
@@ -62,8 +60,36 @@ async def get_yt_video_info(url):
         yt_length_divided = f"{yt_minutes} minutes, {yt_seconds} seconds"
     yt_video_info = {"yt_title": yt.title, "yt_desc": yt.description, "yt_author": yt.author,
                      "yt_publish_date": yt.publish_date, "yt_views": yt.views, "yt_length": yt_length_divided,
-                     "yt_channel_url": yt.channel_url, "yt_video_url": url}
+                     "yt_channel_url": yt.channel_url, "yt_video_url": url,
+                     "yt_thumbnail_name": thumbnail}
     return yt_video_info
+
+
+def delete_file(filepath: str):
+    time.sleep(15)
+    file_to_delete_mp3 = f"downloads/{filepath[:-3]}.mp3"
+    file_to_delete_mp4 = f"downloads/{filepath[:-3]}.mp4"
+    if os.path.exists(file_to_delete_mp3):
+        os.remove(file_to_delete_mp3)
+        print(f"Removed {file_to_delete_mp3}")
+    if os.path.exists(file_to_delete_mp4):
+        os.remove(file_to_delete_mp4)
+        print(f"Removed {file_to_delete_mp4}")
+
+
+def convert_video_to_mp3_return_file(mp4, mp3):
+    try:
+        file_to_convert = AudioFileClip("downloads/" + mp4)
+        file_to_convert.write_audiofile("downloads/" + mp3)
+        file_to_convert.close()
+    except AttributeError:
+        pass
+    return file_to_convert
+
+
+@app.get("/")
+async def index(request: Request):
+    return templates.TemplateResponse(request=request, name="index.html")
 
 
 @app.get("/grab_a_file")
@@ -75,31 +101,6 @@ async def grab_a_file(filename: str, background_tasks: BackgroundTasks):
     print("grab_a_file 2", filename)
     background_tasks.add_task(delete_file, filepath)
     return FileResponse(filepath, media_type="application/octet-stream", filename=filename)
-
-
-def delete_file(filepath: str):
-    time.sleep(60)
-    file_to_delete1 = os.path.basename(filepath)
-    file_to_delete2 = f"downloads/{file_to_delete1}"
-    if os.path.exists(file_to_delete1):
-        os.remove(file_to_delete1)
-        print(f"Removed {file_to_delete1}")
-    if os.path.exists(file_to_delete2):
-        os.remove(file_to_delete2)
-        print(f"Removed {file_to_delete2}")
-
-
-def convert_video_to_mp3_return_file(mp4, mp3):
-    try:
-        file_to_convert = AudioFileClip("downloads/" + mp4)
-        file_to_convert.write_audiofile("downloads/" + mp3)
-        file_to_convert.close()
-    except AttributeError:
-        pass
-    filepath = f"downloads/{mp4}"
-    if os.path.exists(filepath):
-        os.remove(filepath)
-    return file_to_convert
 
 
 @app.post("/audio_htmx")
@@ -120,18 +121,11 @@ async def download_an_audio(request: Request, link: Annotated[str, Query()]):
             data=img.read()
         )
     audio.add(img_file)
-    audio.save(yt_video_title+".mp3")
+    audio.save("downloads/"+yt_video_title+".mp3")
 
     print("download_an_audio", file.filename)
 
-    return templates.TemplateResponse(request=request, name="download_button.html", context={"file_filename": yt_video_title+".mp3"})
-    # return templates.TemplateResponse(request=request, name="download_button.html")
-
-
-
-@app.get("/")
-async def index(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html")
+    return templates.TemplateResponse(request=request, name="download_button.html", context={"file_filename": yt_video_title})
 
 
 @app.post("/yt_video_fetch")
@@ -145,7 +139,4 @@ async def yt_video(request: Request, link: Annotated[str, Form()]):
 async def get_yt_video_info_swagger(url: str):
     yt_info = await get_yt_video_info(url)
     return yt_info
-
-
-
 

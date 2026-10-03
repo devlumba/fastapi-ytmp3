@@ -2,3 +2,4 @@ fastapi[standard]
 moviepy
 pytubefix
 mutagen
+pathvalidate
