@@ -15,8 +15,11 @@
   <div class="input-group-prepend">
     <button class="btn btn-outline-secondary" type="submit">Button</button>
   </div>
-  <input hx-post="/audio_htmx" name="link" type="text" class="form-control" placeholder="" hx-swap="download" aria-describedby="basic-addon1">
+  <input hx-post="/yt_video_fetch" name="link" type="text" class="form-control" placeholder="" hx-swap="innerHTML" aria-describedby="basic-addon1"
+    hx-target="#search-results">
 </div>
+
+<div id="search-results"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"
         integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V"
