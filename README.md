@@ -1,0 +1,1 @@
+as this project uses pytubefix, i'm pretty sure it needs node.js for that automatic POToken generation
