@@ -65,16 +65,36 @@ async def get_yt_video_info(url):
     return yt_video_info
 
 
+# remove the background_tasks line if you don't want for files to be deleted
+@app.get("/grab_a_file")
+async def grab_a_file(filename: str, background_tasks: BackgroundTasks):
+    print("grab_a_file 1", filename)
+    filepath = f"downloads/{os.path.basename(filename)}"
+    if not os.path.exists(filepath):
+        return "no file found"
+    print("grab_a_file 2", filename)
+    background_tasks.add_task(delete_file, filename)
+    return FileResponse(filepath, media_type="application/octet-stream", filename=filename)
+
+
 def delete_file(filepath: str):
+    print("delete file initiated")
+    print(filepath)
     time.sleep(15)
-    file_to_delete_mp3 = f"downloads/{filepath[:-3]}.mp3"
-    file_to_delete_mp4 = f"downloads/{filepath[:-3]}.mp4"
+    print("delete sleep over")
+
+    file_to_delete_mp3 = f"downloads/{filepath[:-4]}.mp3"
+    file_to_delete_mp4 = f"downloads/{filepath[:-4]}.mp4"
+    file_to_delete_png = f"downloads/{filepath[:-4]}.png"
     if os.path.exists(file_to_delete_mp3):
         os.remove(file_to_delete_mp3)
         print(f"Removed {file_to_delete_mp3}")
     if os.path.exists(file_to_delete_mp4):
         os.remove(file_to_delete_mp4)
         print(f"Removed {file_to_delete_mp4}")
+    if os.path.exists(file_to_delete_png):
+        os.remove(file_to_delete_png)
+        print(f"Removed {file_to_delete_png}")
 
 
 def convert_video_to_mp3_return_file(mp4, mp3):
@@ -90,17 +110,6 @@ def convert_video_to_mp3_return_file(mp4, mp3):
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
-
-
-@app.get("/grab_a_file")
-async def grab_a_file(filename: str, background_tasks: BackgroundTasks):
-    print("grab_a_file 1", filename)
-    filepath = f"downloads/{os.path.basename(filename)}"
-    if not os.path.exists(filepath):
-        return "no file found"
-    print("grab_a_file 2", filename)
-    background_tasks.add_task(delete_file, filepath)
-    return FileResponse(filepath, media_type="application/octet-stream", filename=filename)
 
 
 @app.post("/audio_htmx")
