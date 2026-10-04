@@ -10,7 +10,10 @@
     <form action=""></form>
     <button hx-post="/audio_htmx?link={{ yt_info.yt_video_url }}" hx-swap="outerHTML" class="btn btn-primary"
     hx-target="#download-button">Start the Download</button>
+    <a hx-boost="false" href="/grab_a_file?filename={{ yt_info.yt_thumbnail_name }}" class="btn btn-primary">Download Thumbnail</a>
 </div>
 
 <div id="download-button">
 </div>
+
+

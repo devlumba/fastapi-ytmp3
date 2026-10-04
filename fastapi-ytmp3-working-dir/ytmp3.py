@@ -16,12 +16,12 @@ from pathvalidate import sanitize_filename
 
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="fastapi-ytmp3-working-dir/static"), name="static")
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="fastapi-ytmp3-working-dir/templates")
 
 
-downloads_folder = "downloads_new/"
+downloads_folder = "fastapi-ytmp3-working-dir/downloads_new/"
 if not os.path.exists(downloads_folder):
     os.makedirs(downloads_folder)
 
@@ -85,7 +85,7 @@ async def grab_a_file(filename: str, background_tasks: BackgroundTasks):
 def delete_file(filepath: str):
     print("delete file initiated")
     print(filepath)
-    time.sleep(30)
+    time.sleep(600)
     print("delete sleep over")
 
     file_to_delete_mp3 = f"{downloads_folder}{filepath[:-4]}.mp3"
