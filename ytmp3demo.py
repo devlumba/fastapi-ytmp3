@@ -21,9 +21,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
+downloads_folder = "downloads_new/"
+if not os.path.exists(downloads_folder):
+    os.makedirs(downloads_folder)
+
+
 async def download_thumbnail(image_url, desired_filename):
     img_data = requests.get(image_url).content
-    with open("downloads/"+f"{desired_filename}.png", "wb") as handler:
+    with open(downloads_folder+f"{desired_filename}.png", "wb") as handler:
         handler.write(img_data)
     return f"{desired_filename}.png"  # desired_filename == yt_video_filename
 
@@ -35,7 +40,7 @@ async def get_yt_video(url):
     yt_video_name = sanitize_filename(ys.title)
 
     yt_filename = yt_video_name
-    ys.download(filename=yt_filename+".mp4", output_path="downloads/")
+    ys.download(filename=yt_filename+".mp4", output_path=downloads_folder)
     # print("aight")
     return [yt_filename, yt_video_name]
 
@@ -69,7 +74,7 @@ async def get_yt_video_info(url):
 @app.get("/grab_a_file")
 async def grab_a_file(filename: str, background_tasks: BackgroundTasks):
     print("grab_a_file 1", filename)
-    filepath = f"downloads/{os.path.basename(filename)}"
+    filepath = f"{downloads_folder}{os.path.basename(filename)}"
     if not os.path.exists(filepath):
         return "no file found"
     print("grab_a_file 2", filename)
@@ -80,12 +85,12 @@ async def grab_a_file(filename: str, background_tasks: BackgroundTasks):
 def delete_file(filepath: str):
     print("delete file initiated")
     print(filepath)
-    time.sleep(15)
+    time.sleep(30)
     print("delete sleep over")
 
-    file_to_delete_mp3 = f"downloads/{filepath[:-4]}.mp3"
-    file_to_delete_mp4 = f"downloads/{filepath[:-4]}.mp4"
-    file_to_delete_png = f"downloads/{filepath[:-4]}.png"
+    file_to_delete_mp3 = f"{downloads_folder}{filepath[:-4]}.mp3"
+    file_to_delete_mp4 = f"{downloads_folder}{filepath[:-4]}.mp4"
+    file_to_delete_png = f"{downloads_folder}{filepath[:-4]}.png"
     if os.path.exists(file_to_delete_mp3):
         os.remove(file_to_delete_mp3)
         print(f"Removed {file_to_delete_mp3}")
@@ -99,8 +104,8 @@ def delete_file(filepath: str):
 
 def convert_video_to_mp3_return_file(mp4, mp3):
     try:
-        file_to_convert = AudioFileClip("downloads/" + mp4)
-        file_to_convert.write_audiofile("downloads/" + mp3)
+        file_to_convert = AudioFileClip(downloads_folder + mp4)
+        file_to_convert.write_audiofile(downloads_folder + mp3)
         file_to_convert.close()
     except AttributeError:
         pass
@@ -120,8 +125,8 @@ async def download_an_audio(request: Request, link: Annotated[str, Query()]):
     yt_video_title = mp4[1]
     file = convert_video_to_mp3_return_file(mp4=yt_filename+".mp4", mp3=yt_video_title+".mp3")
 
-    audio = ID3("downloads/"+yt_video_title+".mp3")
-    with open(f"downloads/{yt_filename}.png", "rb") as img:
+    audio = ID3(downloads_folder + yt_video_title+".mp3")
+    with open(f"{downloads_folder}{yt_filename}.png", "rb") as img:
         img_file = APIC(
             encoding=0,
             mime="image/png",
@@ -130,7 +135,7 @@ async def download_an_audio(request: Request, link: Annotated[str, Query()]):
             data=img.read()
         )
     audio.add(img_file)
-    audio.save("downloads/"+yt_video_title+".mp3")
+    audio.save(downloads_folder + yt_video_title+".mp3")
 
     print("download_an_audio", file.filename)
 
