@@ -1,0 +1,16 @@
+<div class="content-section border m-2">
+<p class="h1">{{ yt_info.yt_title }}</p>
+<h2>{{ yt_info.yt_desc }}</h2>
+<h2>date published: {{ yt_info.yt_publish_date }}, author= <a href="{{ yt_info.yt_channel_url }}">{{ yt_info.yt_author }}</a> </h2>
+<h2>Views Count: {{ yt_info.yt_views }}, Length: {{ yt_info.yt_length }} </h2>
+</div>
+
+
+<div class="content-section border m-2">
+    <form action=""></form>
+    <button hx-post="/audio_htmx?link={{ yt_info.yt_video_url }}" hx-swap="outerHTML" class="btn btn-primary"
+    hx-target="#download-button">Start the Download</button>
+</div>
+
+<div id="download-button">
+</div>
