@@ -1,6 +1,11 @@
 services:
-  fastapi-ytmp3:
-    build: .
+  redis:
+    image: redis
     ports:
-      - "8000:8000"
-    container_name: fastapi-ytmp3
+      - "6379:6379"
+  redis-commander:
+    image: rediscommander/redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379

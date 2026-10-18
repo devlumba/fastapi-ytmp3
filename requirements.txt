@@ -4,3 +4,7 @@ pytubefix
 mutagen
 pathvalidate
 requests
+celery
+redis
+gevent
+yt_dlp
