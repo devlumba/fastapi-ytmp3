@@ -1,6 +1,0 @@
-services:
-  fastapi-ytmp3:
-    build: .
-    ports:
-      - "8000:8000"
-    container_name: fastapi-ytmp3

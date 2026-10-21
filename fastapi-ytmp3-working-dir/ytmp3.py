@@ -23,7 +23,7 @@ import yt_dlp
 
 
 app = FastAPI()
-celery_app = Celery(name="fastapi-ytmp3", broker="redis://localhost:6379/0", backend="redis://localhost:6379/0")
+celery_app = Celery(name="fastapi-ytmp3", broker="redis://redis:6379/0", backend="redis://redis:6379/1")
 app.mount("/static", StaticFiles(directory="fastapi-ytmp3-working-dir/static"), name="static")
 
 templates = Jinja2Templates(directory="fastapi-ytmp3-working-dir/templates")
