@@ -4,18 +4,19 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - .:/code
+      - downloads:/code/fastapi-ytmp3-working-dir
     command:
       uvicorn fastapi-ytmp3-working-dir.ytmp3:app --reload --host 0.0.0.0 --port 8000
     container_name: fastapi-ytmp3
   worker:
     build: .
     volumes:
-      - .:/code
+      - downloads:/code/fastapi-ytmp3-working-dir
     command:
       celery --app=fastapi-ytmp3-working-dir.ytmp3.celery_app worker --pool=gevent -l info
     depends_on:
       - redis
+      - fastapi-ytmp3
   redis:
     image: redis
     ports:
@@ -26,3 +27,8 @@ services:
       - "8081:8081"
     environment:
       - REDIS_HOSTS=local:redis:6379
+
+volumes:
+  downloads:
+    driver: local
+
