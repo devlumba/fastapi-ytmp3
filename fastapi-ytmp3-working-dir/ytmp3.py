@@ -9,7 +9,7 @@ from typing import Annotated
 from fastapi import FastAPI, Request, Form, Query, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pytubefix import YouTube
 from pytubefix.cli import on_progress
 from moviepy import AudioFileClip
@@ -32,6 +32,8 @@ templates = Jinja2Templates(directory="fastapi-ytmp3-working-dir/templates")
 downloads_folder = "fastapi-ytmp3-working-dir/downloads_new/"
 if not os.path.exists(downloads_folder):
     os.makedirs(downloads_folder)
+
+app.mount("/downloads", StaticFiles(directory="fastapi-ytmp3-working-dir/downloads_new"), name="downloads")
 
 
 def download_thumbnail(image_url, desired_filename):
@@ -133,6 +135,9 @@ def get_yt_video_info(url):
 @app.get("/grab_a_file")
 async def grab_a_file(filename: str, background_tasks: BackgroundTasks, request: Request):
     filepath = f"{downloads_folder}{os.path.basename(filename)}"
+    print("FILEPATH", filepath)
+    print("FILEPATH", filepath)
+    print("FILEPATH", filepath)
     if not os.path.exists(filepath):
         print("'grab_a_file' - file not found")
         return templates.TemplateResponse(request, "message.html", context={"message": "File not found"})
@@ -140,9 +145,24 @@ async def grab_a_file(filename: str, background_tasks: BackgroundTasks, request:
     return FileResponse(filepath, media_type="application/octet-stream", filename=filename)
 
 
+@app.get("/fetch_an_image")
+async def fetch_an_image(request: Request, filename: str):
+    filepath = f"{downloads_folder}{os.path.basename(filename)}"
+    if not os.path.exists(filepath):
+        await asyncio.sleep(5)
+        if not os.path.exists(filepath):
+            return templates.TemplateResponse(request, "message.html", context={"message": "Image not found"})
+
+    return HTMLResponse(status_code=200,
+                        content=f'<img class="border border-secondary rounded" '
+                                f'src="downloads/{filename}" class="img-fluid" '
+                                f'alt="Responsive image" style="width: auto; height: auto; max-width: 20vw; max-height: 20vh;">')
+
+
+
 async def delete_file(filepath: str):  # a background task
     print("'delete_file' function initiated")
-    await asyncio.sleep(600)
+    await asyncio.sleep(300)
 
     file_to_delete_mp3 = f"{downloads_folder}{filepath[:-4]}.mp3"
     file_to_delete_mp4 = f"{downloads_folder}{filepath[:-4]}.mp4"
@@ -173,8 +193,15 @@ def task_id_yt_download(request:Request, task_id: str):
     if mp4_file_task.status == "SUCCESS":
         actual_filename = mp4_file_task.get()
         yt_title = os.path.basename(actual_filename)[:-4]
-        yt_title = sanitize_filename(yt_title)
-        return templates.TemplateResponse(request=request, name="download_button.html", context={"file_filename": yt_title})
+        mp3_file_size = os.path.getsize(downloads_folder+yt_title+".mp3") / 1000000
+        mp4_file_size = os.path.getsize(downloads_folder+yt_title+".mp4") / 1000000
+        mp3_file_size = round(mp3_file_size, 2)
+        mp4_file_size = round(mp4_file_size, 2)
+        # yt_title = sanitize_filename(yt_title)
+        return templates.TemplateResponse(request=request, name="download_button.html",
+                                          context={"file_filename": yt_title,
+                                                   "file_size_mp3": mp3_file_size,
+                                                   "file_size_mp4": mp4_file_size})
     return templates.TemplateResponse(request=request, name="htmx_pending.html", context={"task_id": mp4_file_task.id, "task_type": "yt_download"})
 
 
