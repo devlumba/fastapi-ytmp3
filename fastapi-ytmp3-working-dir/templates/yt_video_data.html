@@ -1,10 +1,10 @@
 <div class="content-section border m-2" style="padding: 2px;">
 <p class="h1">{{ yt_info.yt_title }}</p>
 <pre class="h5" style="white-space: pre-wrap; word-wrap: break-word;">{{ yt_info.yt_desc }}</pre>
-<h2>date published: {{ yt_info.yt_publish_date }}, author= <a href="{{ yt_info.yt_channel_url }}">
+<h2>Published on {{ yt_info.yt_publish_date }} by <a href="{{ yt_info.yt_channel_url }}">
     {{ yt_info.yt_author }}</a> ({{ yt_info.yt_channel_follower_count }} subscribers) </h2>
-<h2>Views Count: {{ yt_info.yt_views }}, Length: {{ yt_info.yt_length }} </h2>
-    <div class="content-section border m-2" hx-get="/fetch_an_image?filename={{ yt_info.yt_thumbnail_name }}" hx-trigger="every 2s" hx-swap="outerHTML">
+<h2>Views: {{ yt_info.yt_views }}, Length: {{ yt_info.yt_length }} </h2>
+    <div class="content-section border m-2" hx-get="/fetch_an_image?filename={{ yt_info.yt_thumbnail_name | urlencode  }}" hx-trigger="every 2s" hx-swap="outerHTML">
     Thumbnail loading...
     </div>
 </div>

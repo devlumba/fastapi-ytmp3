@@ -2,7 +2,6 @@ import requests
 import os
 import stat
 import time
-import shutil
 import asyncio
 from typing import Annotated
 
@@ -10,13 +9,9 @@ from fastapi import FastAPI, Request, Form, Query, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
-from pytubefix import YouTube
-from pytubefix.cli import on_progress
-from moviepy import AudioFileClip
 
 from mutagen.id3 import ID3, APIC
 from mutagen.mp4 import MP4, MP4Cover
-from pathvalidate import sanitize_filename
 from celery import Celery
 from celery.result import AsyncResult
 import yt_dlp
@@ -50,7 +45,7 @@ async def index(request: Request):
 
 @celery_app.task
 def get_yt_video_audio_ytdlp(url: str):
-    print("GET YT VIDEO INITIATED")
+    # print("GET YT VIDEO INITIATED")
     output_dir = downloads_folder
 
     ydl_options = {
@@ -60,8 +55,6 @@ def get_yt_video_audio_ytdlp(url: str):
     }
     with yt_dlp.YoutubeDL(ydl_options) as ydl:
         info = ydl.extract_info(url, download=True)
-        for key in info:
-            print(key)
         mp4_filepath = info["requested_downloads"][0]["filepath"]
         actual_filename = ydl.prepare_filename(info)
         video = MP4(mp4_filepath)
@@ -119,10 +112,10 @@ def get_yt_video_info(url):
         yt_hours = yt_length // 3600
         yt_minutes = yt_length // 60 - yt_hours * 60
         yt_seconds = yt_length - yt_hours * 3600 - yt_minutes * 60
-        yt_length_divided = f"{yt_hours} hours, {yt_minutes} minutes, {yt_seconds} seconds"
+        yt_length_divided = f"{yt_hours, ' hour' if yt_hours < 2 else yt_hours, ' hours'}, {yt_minutes} minutes, {yt_seconds} seconds"
     else:
         yt_minutes = yt_length // 60
-        yt_seconds = yt_length- yt_minutes * 60 - 1
+        yt_seconds = yt_length- yt_minutes * 60
         yt_length_divided = f"{yt_minutes} minutes, {yt_seconds} seconds"
     yt_video_info = {"yt_title": yt_video_name, "yt_desc": yt_description, "yt_author": yt_channel,
                      "yt_publish_date": yt_publish_date, "yt_views": yt_views, "yt_length": yt_length_divided,
@@ -135,9 +128,6 @@ def get_yt_video_info(url):
 @app.get("/grab_a_file")
 async def grab_a_file(filename: str, background_tasks: BackgroundTasks, request: Request):
     filepath = f"{downloads_folder}{os.path.basename(filename)}"
-    print("FILEPATH", filepath)
-    print("FILEPATH", filepath)
-    print("FILEPATH", filepath)
     if not os.path.exists(filepath):
         print("'grab_a_file' - file not found")
         return templates.TemplateResponse(request, "message.html", context={"message": "File not found"})
@@ -145,24 +135,9 @@ async def grab_a_file(filename: str, background_tasks: BackgroundTasks, request:
     return FileResponse(filepath, media_type="application/octet-stream", filename=filename)
 
 
-@app.get("/fetch_an_image")
-async def fetch_an_image(request: Request, filename: str):
-    filepath = f"{downloads_folder}{os.path.basename(filename)}"
-    if not os.path.exists(filepath):
-        await asyncio.sleep(5)
-        if not os.path.exists(filepath):
-            return templates.TemplateResponse(request, "message.html", context={"message": "Image not found"})
-
-    return HTMLResponse(status_code=200,
-                        content=f'<img class="border border-secondary rounded" '
-                                f'src="downloads/{filename}" class="img-fluid" '
-                                f'alt="Responsive image" style="width: auto; height: auto; max-width: 20vw; max-height: 20vh;">')
-
-
-
 async def delete_file(filepath: str):  # a background task
     print("'delete_file' function initiated")
-    await asyncio.sleep(300)
+    await asyncio.sleep(600)
 
     file_to_delete_mp3 = f"{downloads_folder}{filepath[:-4]}.mp3"
     file_to_delete_mp4 = f"{downloads_folder}{filepath[:-4]}.mp4"
@@ -171,7 +146,6 @@ async def delete_file(filepath: str):  # a background task
         os.remove(file_to_delete_mp3)
         print(f"Removed {file_to_delete_mp3}")
     if os.path.exists(file_to_delete_mp4):
-        os.chmod(file_to_delete_mp4, stat.S_IWRITE)  # remove the read-only attribute
         os.remove(file_to_delete_mp4)
         print(f"Removed {file_to_delete_mp4}")
     if os.path.exists(file_to_delete_png):
@@ -179,9 +153,22 @@ async def delete_file(filepath: str):  # a background task
         print(f"Removed {file_to_delete_png}")
 
 
+@app.get("/fetch_an_image")
+async def fetch_an_image(request: Request, filename: str):
+    filepath = f"{downloads_folder}{os.path.basename(filename)}"
+    if not os.path.exists(filepath):
+        await asyncio.sleep(5)
+        if not os.path.exists(filepath):
+            return templates.TemplateResponse(request, "message.html", context={"message": "Thumbnail Image Not Found"})
+
+    return HTMLResponse(status_code=200,
+                        content=f'<img class="border border-secondary rounded" '
+                                f'src="downloads/{filename}" class="img-fluid" '
+                                f'alt="Responsive image" style="width: auto; height: auto; max-width: 20vw; max-height: 20vh;">')
+
+
 @app.post("/initiate_download")
 async def initiate_download(request: Request, link: Annotated[str, Query()]):
-    print("'initiate_download' function initiated")
     mp4_file_task = get_yt_video_audio_ytdlp.delay(url=link)
     return templates.TemplateResponse(request=request, name="htmx_pending.html",
                                       context={"task_id": mp4_file_task.id, "task_type": "yt_download"})
@@ -197,7 +184,6 @@ def task_id_yt_download(request:Request, task_id: str):
         mp4_file_size = os.path.getsize(downloads_folder+yt_title+".mp4") / 1000000
         mp3_file_size = round(mp3_file_size, 2)
         mp4_file_size = round(mp4_file_size, 2)
-        # yt_title = sanitize_filename(yt_title)
         return templates.TemplateResponse(request=request, name="download_button.html",
                                           context={"file_filename": yt_title,
                                                    "file_size_mp3": mp3_file_size,
@@ -207,8 +193,6 @@ def task_id_yt_download(request:Request, task_id: str):
 
 @app.post("/yt_video_fetch")
 async def yt_video_fetch(request: Request, link: Annotated[str, Form()]):
-    # print("fetching a video, HTMX")
-    print("'yt_video' function initiated(/yt_video_fetch)")
     yt_info = get_yt_video_info.delay(url=link)
     return templates.TemplateResponse(request=request, name="htmx_pending.html", context={"task_id": yt_info.id, "task_type": "yt_info"})
 
@@ -230,5 +214,3 @@ async def get_yt_video_info_swagger(url: str):
     time.sleep(5)
     return yt_info.get()
 
-
-# get_yt_video_info.delay(url="https://www.youtube.com/watch?v=_oyCroWsQkg")
