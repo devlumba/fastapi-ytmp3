@@ -1,7 +1,7 @@
 from unittest import mock
 from unittest.mock import patch
 
-def test_endpoint_queues_the_video_fetch_task(client):
+def test_endpoint_queues_the_video_fetch_task(client):  # mock tests, checks whether fastapi is working
     with patch("ytmp3.get_yt_video_info.delay") as mock_delay:
         mock_delay.return_value.id = "fake-task-id-233"
 
@@ -14,7 +14,7 @@ def test_endpoint_queues_the_video_fetch_task(client):
         assert "fake-task-id-233" in response.text
 
 
-def test_endpoint_queues_the_video_download_task(client):
+def test_endpoint_queues_the_video_download_task(client):  # mock tests, checks whether fastapi is working
     with patch("ytmp3.get_yt_video_audio_ytdlp.delay") as mock_delay:
         mock_delay.return_value.id = "fake-task-id-122"
 
