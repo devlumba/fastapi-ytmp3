@@ -8,3 +8,6 @@ celery
 redis
 gevent
 yt_dlp
+pytest
+httpx2
+setuptools
