@@ -1,9 +1,11 @@
 import requests
 import os
 import stat
+import shutil
 import time
 import asyncio
 from typing import Annotated
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Form, Query, BackgroundTasks
 from fastapi.templating import Jinja2Templates
@@ -16,19 +18,30 @@ from celery import Celery
 from celery.result import AsyncResult
 import yt_dlp
 
+downloads_folder = "fastapi-ytmp3-working-dir/downloads_new/"
+if not os.path.exists(downloads_folder):
+    os.makedirs(downloads_folder)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    shutil.rmtree(downloads_folder)
+
+app = FastAPI(lifespan=lifespan)
 celery_app = Celery(name="fastapi-ytmp3", broker="redis://redis:6379/0", backend="redis://redis:6379/1")
 app.mount("/static", StaticFiles(directory="fastapi-ytmp3-working-dir/static"), name="static")
 
 templates = Jinja2Templates(directory="fastapi-ytmp3-working-dir/templates")
 
-
-downloads_folder = "fastapi-ytmp3-working-dir/downloads_new/"
-if not os.path.exists(downloads_folder):
-    os.makedirs(downloads_folder)
-
 app.mount("/downloads", StaticFiles(directory="fastapi-ytmp3-working-dir/downloads_new"), name="downloads")
+
+
+async def delete_file_lifespan(filepath: str):  # a background task
+    file_to_delete = f"{downloads_folder}{filepath}"
+    if os.path.exists(file_to_delete):
+        os.remove(file_to_delete)
+        print(f"Removed {file_to_delete}")
+
 
 
 def download_thumbnail(image_url, desired_filename):
