@@ -43,7 +43,6 @@ async def delete_file_lifespan(filepath: str):  # a background task
         print(f"Removed {file_to_delete}")
 
 
-
 def download_thumbnail(image_url, desired_filename):
     img_data = requests.get(image_url).content
     with open(downloads_folder+f"{desired_filename}.png", "wb") as handler:
@@ -65,6 +64,9 @@ def get_yt_video_audio_ytdlp(url: str):
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',  # or 'bestvideo+bestaudio'
         'outtmpl': f'{output_dir}/%(title)s.%(ext)s',
         "embed-thumbnail": True,
+
+        'js_runtimes': ["deno", "node"],
+        "remote_components": ["ejs:github"]
     }
     with yt_dlp.YoutubeDL(ydl_options) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -87,6 +89,9 @@ def get_yt_video_audio_ytdlp(url: str):
         }],
         'outtmpl': f'{output_dir}/%(title)s.%(ext)s',
         "embed-thumbnail": True,
+
+        'js_runtimes': ["deno", "node"],
+        "remote_components": ["ejs:github"]
     }
     with yt_dlp.YoutubeDL(ydl_options) as ydl:
         info = ydl.extract_info(url, download=True)  # doing it like this so conversion isn't hardcoded
