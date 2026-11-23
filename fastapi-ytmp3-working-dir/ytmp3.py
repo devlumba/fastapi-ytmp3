@@ -117,7 +117,8 @@ def get_yt_video_audio_ytdlp(url: str):
 def get_yt_video_info(url):
     ydl_options = {'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
                            'outtmpl': f'{downloads_folder}/%(title)s.%(ext)s',
-                           "noplaylist": True}
+                           "noplaylist": True, 'js_runtimes': {"deno": {}, "node": {}},
+                           "remote_components": ["ejs:github"]}
     with yt_dlp.YoutubeDL(ydl_options) as ydl:
         info = ydl.extract_info(url, download=False)
         yt_video_name = os.path.basename(ydl.prepare_filename(info))[:-4]
