@@ -16,6 +16,7 @@ from mutagen.id3 import ID3, APIC
 from mutagen.mp4 import MP4, MP4Cover
 from celery import Celery
 from celery.result import AsyncResult
+from PIL import Image
 import yt_dlp
 
 downloads_folder = "fastapi-ytmp3-working-dir/downloads_new/"
@@ -47,6 +48,8 @@ def download_thumbnail(image_url, desired_filename):
     img_data = requests.get(image_url).content
     with open(downloads_folder+f"{desired_filename}.png", "wb") as handler:
         handler.write(img_data)
+    with Image.open(f"{downloads_folder}{desired_filename}.png") as img:
+        img.convert("RGB").save(f"{downloads_folder}{desired_filename}.png", "PNG")
     return f"{desired_filename}.png"
 
 
@@ -63,7 +66,7 @@ def get_yt_video_audio_ytdlp(url: str):
     ydl_options = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',  # or 'bestvideo+bestaudio'
         'outtmpl': f'{output_dir}/%(title)s.%(ext)s',
-        "embed-thumbnail": True,
+        "embed-thumbnail": False,
 
         'js_runtimes': {"deno": {}, "node": {}},
         "remote_components": ["ejs:github"]
@@ -88,7 +91,7 @@ def get_yt_video_audio_ytdlp(url: str):
             'preferredquality': '192',
         }],
         'outtmpl': f'{output_dir}/%(title)s.%(ext)s',
-        "embed-thumbnail": True,
+        "embed-thumbnail": False,
 
         'js_runtimes': {"deno": {}, "node": {}},
         "remote_components": ["ejs:github"]
@@ -96,9 +99,12 @@ def get_yt_video_audio_ytdlp(url: str):
     with yt_dlp.YoutubeDL(ydl_options) as ydl:
         info = ydl.extract_info(url, download=True)  # doing it like this so conversion isn't hardcoded
         mp3_filepath = info["requested_downloads"][0]["filepath"]
-        # print("mp3 exists", os.path.exists(mp3_filepath))
+        print("mp3 exists", os.path.exists(mp3_filepath))
         audio = ID3(mp3_filepath)
         png_file = f"{mp3_filepath[:-4]}.png"
+        print("png exists", os.path.exists(png_file))
+        print("png exists", os.path.exists(png_file))
+        print("png exists", os.path.exists(png_file))
         with open(png_file, "rb") as img:
             img_file = APIC(encoding=0, mime="image/png", type=3, desc="Cover", data=img.read())
         audio.add(img_file)
@@ -149,17 +155,18 @@ async def grab_a_file(filename: str, background_tasks: BackgroundTasks, request:
     if not os.path.exists(filepath):
         print("'grab_a_file' - file not found")
         return templates.TemplateResponse(request, "message.html", context={"message": "File not found"})
-    background_tasks.add_task(delete_file, filename)
+    delete_file.delay(filename=filename)
     return FileResponse(filepath, media_type="application/octet-stream", filename=filename)
 
 
-async def delete_file(filepath: str):  # a background task
+@celery_app.task
+def delete_file(filename: str):  # a background task
     print("'delete_file' function initiated")
-    await asyncio.sleep(600)
+    time.sleep(600)
 
-    file_to_delete_mp3 = f"{downloads_folder}{filepath[:-4]}.mp3"
-    file_to_delete_mp4 = f"{downloads_folder}{filepath[:-4]}.mp4"
-    file_to_delete_png = f"{downloads_folder}{filepath[:-4]}.png"
+    file_to_delete_mp3 = f"{downloads_folder}{filename[:-4]}.mp3"
+    file_to_delete_mp4 = f"{downloads_folder}{filename[:-4]}.mp4"
+    file_to_delete_png = f"{downloads_folder}{filename[:-4]}.png"
     if os.path.exists(file_to_delete_mp3):
         os.remove(file_to_delete_mp3)
         print(f"Removed {file_to_delete_mp3}")
