@@ -65,7 +65,7 @@ def get_yt_video_audio_ytdlp(url: str):
         'outtmpl': f'{output_dir}/%(title)s.%(ext)s',
         "embed-thumbnail": True,
 
-        'js_runtimes': ["deno", "node"],
+        'js_runtimes': {"deno": {}, "node": {}},
         "remote_components": ["ejs:github"]
     }
     with yt_dlp.YoutubeDL(ydl_options) as ydl:
@@ -90,7 +90,7 @@ def get_yt_video_audio_ytdlp(url: str):
         'outtmpl': f'{output_dir}/%(title)s.%(ext)s',
         "embed-thumbnail": True,
 
-        'js_runtimes': ["deno", "node"],
+        'js_runtimes': {"deno": {}, "node": {}},
         "remote_components": ["ejs:github"]
     }
     with yt_dlp.YoutubeDL(ydl_options) as ydl:
