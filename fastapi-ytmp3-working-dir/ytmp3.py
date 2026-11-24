@@ -99,12 +99,8 @@ def get_yt_video_audio_ytdlp(url: str):
     with yt_dlp.YoutubeDL(ydl_options) as ydl:
         info = ydl.extract_info(url, download=True)  # doing it like this so conversion isn't hardcoded
         mp3_filepath = info["requested_downloads"][0]["filepath"]
-        print("mp3 exists", os.path.exists(mp3_filepath))
         audio = ID3(mp3_filepath)
         png_file = f"{mp3_filepath[:-4]}.png"
-        print("png exists", os.path.exists(png_file))
-        print("png exists", os.path.exists(png_file))
-        print("png exists", os.path.exists(png_file))
         with open(png_file, "rb") as img:
             img_file = APIC(encoding=0, mime="image/png", type=3, desc="Cover", data=img.read())
         audio.add(img_file)
